@@ -38,6 +38,12 @@ data "aws_vpc" "default" {
   default = true
 }
 
+# Get default Security Group
+data "aws_security_group" "default" {
+  vpc_id = data.aws_vpc.default.id
+  name = "default"
+}
+
 # Get default subnets
 data "aws_subnets" "default" {
   filter {
@@ -53,17 +59,24 @@ data "aws_subnets" "default" {
 
 # EC2 Instance
 resource "aws_instance" "frontend" {
-  ami                         = "ami-0c55b159cbfafe1f0"  # Amazon Linux 2 AMI
+  ami                         = "ami-0ebfd941bbafe70c6"  # Amazon Linux 2 AMI
   instance_type               = "t2.micro"
   associate_public_ip_address = true
   subnet_id                   = data.aws_subnets.default.ids[0]
-  security_groups             = [aws_security_group.frontend_sg.name]
+  security_groups             = [data.aws_security_group.default.id]
 
   tags = {
     Name = "frontend_instance"
   }
 }
 
+# Define region for AWS provider 
+variable "aws_region" {
+  description = "The AWS region to deploy to"
+  default     = "us-east-1"
+}
+
 output "frontend_public_ip" {
-  value = aws_instance.frontend.public_ip
+  description = "The public IP address of the front-end EC2 instance"
+  value       = aws_instance.frontend.public_ip
 }
