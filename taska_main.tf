@@ -6,6 +6,7 @@ provider "aws" {
 resource "aws_security_group" "frontend_sg" {
   name   = "frontend_sg"
   vpc_id = data.aws_vpc.default.id
+  
 
   ingress {
     from_port   = 22
@@ -59,11 +60,28 @@ data "aws_subnets" "default" {
 
 # EC2 Instance
 resource "aws_instance" "frontend" {
-  ami                         = "ami-0ebfd941bbafe70c6"  # Amazon Linux 2 AMI
+  ami                         = "ami-0e86e20dae9224db8"
   instance_type               = "t2.micro"
   associate_public_ip_address = true
   subnet_id                   = data.aws_subnets.default.ids[0]
-  security_groups             = [data.aws_security_group.default.id]
+  security_groups             = [aws_security_group.frontend_sg.id]
+  key_name = "id_rsa"
+
+provisioner "remote-exec" {
+    inline = [
+      "sudo yum update -y",
+      "sudo yum install -y nginx",
+      "sudo systemctl start nginx",
+      "sudo systemctl enable nginx"
+    ]
+
+    connection {
+      type        = "ssh"
+      user        = "ec2-user"
+      private_key = file("~/Downloads/id_rsa.pem")
+      host        = self.public_ip
+    }
+  }
 
   tags = {
     Name = "frontend_instance"
@@ -76,7 +94,3 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
-output "frontend_public_ip" {
-  description = "The public IP address of the front-end EC2 instance"
-  value       = aws_instance.frontend.public_ip
-}
